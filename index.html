@@ -142,20 +142,26 @@ nav{background:var(--midnight);padding:16px 32px;display:flex;align-items:center
       <text x="110" y="46" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#1A1A2E" letter-spacing="-2">nkle</text>
     </svg>
     <div class="login-title">Welcome back</div>
-    <div class="login-sub">Enter your email and we will send you a secure login link. No password needed.</div>
+    <div class="login-sub">Enter the email address you used when you signed up. We will send a secure one-click login link to that address.</div>
     <div id="login-form-body">
       <div class="field">
-        <label>Email address</label>
+        <label>Your Ainkle email</label>
         <input type="email" id="login-email" placeholder="you@company.com" autocomplete="email" onkeydown="if(event.key==='Enter')sendMagicLink()"/>
       </div>
       <button class="login-btn" onclick="sendMagicLink()" id="magic-btn">Send login link</button>
       <div class="login-error" id="login-error"></div>
-      <div class="login-note">No account yet? <a href="https://ainkle.com" style="color:var(--accent)">Start a free consultation</a></div>
+      <div style="background:#f0f4f8;border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:12px;font-size:12px;color:var(--muted);line-height:1.6">
+        🔒 For security, the login link is only sent to the email on file. Only the person who owns that inbox can sign in.
+      </div>
+      <div class="login-note" style="margin-top:12px">No account yet? <a href="https://ainkle.com" style="color:var(--accent)">Start a free consultation</a></div>
     </div>
     <div class="magic-sent" id="magic-sent">
       <div class="icon">📬</div>
       <h3>Check your email</h3>
-      <p>We sent a login link to <strong id="magic-email"></strong>. Click it to access your portal. Check spam if you do not see it within a minute.</p>
+      <p>We sent a login link to <strong id="magic-email"></strong>. Click it to sign in — no password needed.<br/><br/>Can not find it? Check your spam folder. The link expires in 1 hour.</p>
+      <div style="margin-top:16px">
+        <button onclick="document.getElementById('magic-sent').style.display='none';document.getElementById('login-form-body').style.display='block';document.getElementById('magic-btn').disabled=false;document.getElementById('magic-btn').textContent='Send login link';" style="background:none;border:none;font-size:13px;color:var(--muted);cursor:pointer;font-family:var(--font);text-decoration:underline">Try a different email</button>
+      </div>
     </div>
   </div>
 </div>
@@ -237,7 +243,10 @@ async function sendMagicLink(){
   if(error){err.textContent=error.message;err.style.display='block';btn.disabled=false;btn.textContent='Send login link';return}
   document.getElementById('login-form-body').style.display='none';
   document.getElementById('magic-sent').style.display='block';
-  document.getElementById('magic-email').textContent=email;
+  // Mask email for privacy e.g. j***@yahoo.com
+  const parts=email.split('@');
+  const masked=parts[0][0]+'***@'+parts[1];
+  document.getElementById('magic-email').textContent=masked;
 }
 
 async function doLogout(){
