@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>My Ainkle — Your Apps</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg width='48' height='48' viewBox='0 0 48 48' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='48' height='48' rx='12' fill='%231A1A2E'/%3E%3Cpath d='M18 12 L18 28 Q18 36 26 36 L34 36' stroke='%234FC3F7' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='18' cy='12' r='3' fill='%234FC3F7'/%3E%3C/svg%3E"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f4f8;--surface:#ffffff;--surface2:#e8f0f7;--border:#d0dce8;--border2:#b8cce0;
+  --text:#0d1520;--muted:#5a7a94;--accent:#4FC3F7;--accent-dim:#e0f4fd;
+  --midnight:#1A1A2E;--red:#dc2626;--red-dim:#fef2f2;--green:#16a34a;
+  --font:'Syne',sans-serif;--mono:'DM Mono',monospace;--radius:12px;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--font)}
+nav{background:var(--midnight);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.nav-logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800;color:#f0f4ff}
+.nav-logo span{color:var(--accent)}
+.nav-user{font-size:13px;color:rgba(255,255,255,.5);display:flex;align-items:center;gap:12px}
+.nav-user strong{color:rgba(255,255,255,.8)}
+.logout-btn{font-size:12px;padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;font-family:var(--font)}
+.logout-btn:hover{border-color:rgba(255,255,255,.3);color:rgba(255,255,255,.8)}
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:48px;width:100%;max-width:420px;box-shadow:0 4px 24px rgba(0,0,0,.06)}
+.login-title{font-size:24px;font-weight:800;margin-bottom:6px;margin-top:20px}
+.login-sub{font-size:14px;color:var(--muted);margin-bottom:32px;line-height:1.6}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--muted);font-family:var(--mono);letter-spacing:.05em;margin-bottom:6px}
+.field input{width:100%;padding:12px 16px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:15px;color:var(--text);background:var(--surface);outline:none;transition:border-color .2s}
+.field input:focus{border-color:var(--accent)}
+.field input::placeholder{color:var(--muted)}
+.login-btn{width:100%;padding:14px;border-radius:10px;border:none;background:var(--accent);color:#0d1520;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;transition:opacity .15s;margin-top:4px}
+.login-btn:hover{opacity:.88}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+.login-error{font-size:13px;color:var(--red);margin-top:12px;text-align:center;display:none}
+.magic-sent{display:none;text-align:center;padding:24px 0}
+.magic-sent .icon{font-size:40px;margin-bottom:12px}
+.magic-sent h3{font-size:18px;font-weight:700;margin-bottom:8px}
+.magic-sent p{font-size:14px;color:var(--muted);line-height:1.6}
+.login-note{font-size:12px;color:var(--muted);text-align:center;margin-top:16px;line-height:1.6}
+#portal{display:none}
+.portal-header{max-width:960px;margin:0 auto;padding:40px 32px 0}
+.portal-welcome{font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:4px}
+.portal-sub{font-size:15px;color:var(--muted)}
+.portal-content{max-width:960px;margin:0 auto;padding:32px}
+.apps-grid{display:flex;flex-direction:column;gap:16px}
+.app-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s}
+.app-card:hover{border-color:var(--border2)}
+.app-card-top{padding:24px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.app-card-info{flex:1}
+.app-tier-badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;margin-bottom:8px;letter-spacing:.08em}
+.app-name{font-size:20px;font-weight:700;margin-bottom:6px}
+.app-summary{font-size:13px;color:var(--muted);line-height:1.6;max-width:600px}
+.app-status-area{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0}
+.status-badge{font-size:11px;font-weight:600;padding:4px 12px;border-radius:100px;font-family:var(--mono)}
+.status-new,.status-reviewing{background:#eff6ff;color:#2563eb}
+.status-building{background:#f5f3ff;color:#7c3aed}
+.status-demo_sent{background:#f0fdf4;color:#16a34a}
+.status-approved{background:#dcfce7;color:#15803d}
+.status-live{background:#bbf7d0;color:#14532d}
+.status-cancelled{background:#f1f5f9;color:#64748b}
+.app-ref{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.app-card-body{padding:0 24px 24px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.app-action-btn{font-size:13px;font-weight:600;padding:9px 18px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;font-family:var(--font);transition:all .15s;display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+.app-action-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.app-action-btn.primary{background:var(--accent);color:#0d1520;border-color:var(--accent)}
+.app-action-btn.primary:hover{opacity:.88;color:#0d1520}
+.app-action-btn.danger{color:var(--red);border-color:#fca5a5}
+.app-action-btn.danger:hover{background:var(--red-dim)}
+.app-pricing{margin-left:auto;text-align:right}
+.app-pricing .monthly{font-size:18px;font-weight:800}
+.app-pricing .monthly span{font-size:12px;font-weight:400;color:var(--muted)}
+.app-pricing .setup{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.status-timeline{padding:16px 24px;border-top:1px solid var(--border);background:var(--surface2);display:flex;gap:0}
+.timeline-step{flex:1;display:flex;flex-direction:column;align-items:center;position:relative}
+.timeline-step::before{content:'';position:absolute;top:10px;left:50%;right:-50%;height:2px;background:var(--border2);z-index:0}
+.timeline-step:last-child::before{display:none}
+.timeline-dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--border2);background:var(--surface);z-index:1;display:flex;align-items:center;justify-content:center;font-size:9px;margin-bottom:6px}
+.timeline-dot.done{background:var(--accent);border-color:var(--accent);color:#0d1520;font-weight:700}
+.timeline-dot.current{background:var(--surface);border-color:var(--accent);color:var(--accent)}
+.timeline-label{font-size:9px;color:var(--muted);font-family:var(--mono);text-align:center;letter-spacing:.04em}
+.timeline-label.active{color:var(--accent);font-weight:600}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border-radius:16px;padding:32px;width:100%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,.12)}
+.modal h3{font-size:18px;font-weight:700;margin-bottom:8px}
+.modal p{font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6}
+.modal textarea{width:100%;min-height:120px;resize:vertical;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:12px 14px;font-family:var(--font);font-size:14px;color:var(--text);outline:none;line-height:1.6;margin-bottom:16px;transition:border-color .2s}
+.modal textarea:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end}
+.modal-btn{font-size:13px;font-weight:600;padding:9px 20px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;font-family:var(--font)}
+.modal-btn.primary{background:var(--accent);color:#0d1520;border-color:var(--accent)}
+.new-project-banner{background:linear-gradient(135deg,var(--midnight),#1a2a3e);border-radius:var(--radius);padding:28px 32px;display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:24px}
+.new-project-banner h3{font-size:18px;font-weight:700;color:#f0f4ff;margin-bottom:4px}
+.new-project-banner p{font-size:13px;color:rgba(255,255,255,.5)}
+.new-project-btn{font-size:13px;font-weight:700;padding:11px 24px;border-radius:10px;background:var(--accent);color:#0d1520;border:none;cursor:pointer;font-family:var(--font);white-space:nowrap;flex-shrink:0;text-decoration:none;display:inline-block}
+.empty-state{text-align:center;padding:64px 20px;color:var(--muted)}
+.empty-state .icon{font-size:48px;margin-bottom:16px}
+.empty-state h3{font-size:20px;font-weight:700;color:var(--text);margin-bottom:8px}
+.empty-state p{font-size:14px;line-height:1.7;max-width:400px;margin:0 auto 24px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:#f0f4ff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.toast.success{background:var(--green)}
+.toast.error{background:var(--red)}
+@media(max-width:640px){
+  .portal-header,.portal-content{padding-left:16px;padding-right:16px}
+  .app-card-top{flex-direction:column}
+  .app-status-area{align-items:flex-start}
+  .app-pricing{margin-left:0;text-align:left}
+  .new-project-banner{flex-direction:column;text-align:center}
+  .status-timeline{display:none}
+  nav{padding:12px 16px}
+}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title">Request changes</h3>
+    <p id="modal-desc">Describe what you would like changed.</p>
+    <textarea id="modal-text" placeholder="What would you like changed or added?"></textarea>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn primary" onclick="submitModal()">Send request</button>
+    </div>
+  </div>
+</div>
+
+<div id="login-screen">
+  <div class="login-card">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 64" height="32">
+      <rect width="280" height="64" rx="12" fill="#1A1A2E"/>
+      <rect x="8" y="8" width="48" height="48" rx="10" fill="#4FC3F7"/>
+      <path d="M26 20 L26 36 Q26 44 34 44 L42 44" stroke="#1A1A2E" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <circle cx="26" cy="20" r="3" fill="#1A1A2E"/>
+      <text x="68" y="46" font-family="Georgia, serif" font-size="38" font-weight="700" fill="#4FC3F7" letter-spacing="-1">A</text>
+      <text x="92" y="46" font-family="Georgia, serif" font-size="38" font-weight="700" fill="#4FC3F7" letter-spacing="-1">I</text>
+      <text x="110" y="46" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#1A1A2E" letter-spacing="-2">nkle</text>
+    </svg>
+    <div class="login-title">Welcome back</div>
+    <div class="login-sub">Enter your email and we will send you a secure login link. No password needed.</div>
+    <div id="login-form-body">
+      <div class="field">
+        <label>Email address</label>
+        <input type="email" id="login-email" placeholder="you@company.com" autocomplete="email" onkeydown="if(event.key==='Enter')sendMagicLink()"/>
+      </div>
+      <button class="login-btn" onclick="sendMagicLink()" id="magic-btn">Send login link</button>
+      <div class="login-error" id="login-error"></div>
+      <div class="login-note">No account yet? <a href="https://ainkle.com" style="color:var(--accent)">Start a free consultation</a></div>
+    </div>
+    <div class="magic-sent" id="magic-sent">
+      <div class="icon">📬</div>
+      <h3>Check your email</h3>
+      <p>We sent a login link to <strong id="magic-email"></strong>. Click it to access your portal. Check spam if you do not see it within a minute.</p>
+    </div>
+  </div>
+</div>
+
+<div id="portal">
+  <nav>
+    <div class="nav-logo">
+      <svg width="24" height="24" viewBox="0 0 48 48" fill="none">
+        <rect width="48" height="48" rx="12" fill="#1A1A2E"/>
+        <path d="M18 12 L18 28 Q18 36 26 36 L34 36" stroke="#4FC3F7" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="18" cy="12" r="3" fill="#4FC3F7"/>
+      </svg>
+      <span style="color:var(--accent)">AI</span>nkle
+    </div>
+    <div class="nav-user">
+      <span>Signed in as <strong id="nav-email"></strong></span>
+      <button class="logout-btn" onclick="doLogout()">Sign out</button>
+    </div>
+  </nav>
+  <div class="portal-header">
+    <div class="portal-welcome" id="portal-welcome">Your apps</div>
+    <div class="portal-sub">Manage your Ainkle apps, request changes, and track your projects.</div>
+  </div>
+  <div class="portal-content">
+    <div class="new-project-banner">
+      <div>
+        <h3>Need another app?</h3>
+        <p>Start a new consultation — takes about 5 minutes</p>
+      </div>
+      <a href="https://ainkle.com" class="new-project-btn">+ Start new project</a>
+    </div>
+    <div class="apps-grid" id="apps-grid">
+      <div style="text-align:center;padding:40px;color:var(--muted)">Loading your apps...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://qunchnutxjbaxesajszm.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1bmNobnV0eGpiYXhlc2Fqc3ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjQ5MTYsImV4cCI6MjA5MjA0MDkxNn0.GgZQ9qFTeOLjSRs8KxSt_MW4Q4FO3DJEyHUpDnl32lM';
+const CLOUDFLARE='https://aiai-proxy.aiai-admin.workers.dev/';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let currentUser=null;
+let modalAction=null;
+let modalProjectId=null;
+
+function toast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+(type||'');setTimeout(()=>t.className='toast',4000)}
+
+function getTier(fee){
+  if(fee<=9)return{name:'Spark',color:'#4FC3F7'};
+  if(fee<=29)return{name:'Build',color:'#4ecb71'};
+  if(fee<=59)return{name:'Grow',color:'#e8a628'};
+  if(fee<=99)return{name:'Scale',color:'#a78bfa'};
+  return{name:'Enterprise',color:'#f87171'};
+}
+
+const STATUS_ORDER=['new','reviewing','building','demo_sent','approved','live'];
+const STATUS_LABELS={new:'Received',reviewing:'Reviewing',building:'Building',demo_sent:'Demo sent',approved:'Approved',live:'Live'};
+
+function timelineHtml(status){
+  const idx=STATUS_ORDER.indexOf(status||'new');
+  return STATUS_ORDER.map((s,i)=>{
+    const done=i<idx;
+    const current=i===idx;
+    return '<div class="timeline-step"><div class="timeline-dot '+(done?'done':current?'current':'')+'">'+(done?'v':i+1)+'</div><div class="timeline-label '+(current?'active':'')+'">'+STATUS_LABELS[s]+'</div></div>';
+  }).join('');
+}
+
+function fmt(n){return '$'+(n||0).toLocaleString()}
+
+async function sendMagicLink(){
+  const email=document.getElementById('login-email').value.trim();
+  const err=document.getElementById('login-error');
+  const btn=document.getElementById('magic-btn');
+  err.style.display='none';
+  if(!email||!email.includes('@')){err.textContent='Please enter a valid email';err.style.display='block';return}
+  btn.disabled=true;btn.textContent='Sending...';
+  const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:'https://my.ainkle.com'}});
+  if(error){err.textContent=error.message;err.style.display='block';btn.disabled=false;btn.textContent='Send login link';return}
+  document.getElementById('login-form-body').style.display='none';
+  document.getElementById('magic-sent').style.display='block';
+  document.getElementById('magic-email').textContent=email;
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  document.getElementById('portal').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  currentUser=null;
+}
+
+async function checkAuth(){
+  const{data:{session}}=await sb.auth.getSession();
+  if(session){currentUser=session.user;showPortal(session.user)}
+  sb.auth.onAuthStateChange((event,session)=>{
+    if(event==='SIGNED_IN'&&session){currentUser=session.user;showPortal(session.user)}
+  });
+}
+
+async function showPortal(user){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('portal').style.display='block';
+  document.getElementById('nav-email').textContent=user.email;
+  const{data}=await sb.from('projects').select('customer_name').eq('customer_email',user.email).limit(1);
+  const name=data&&data[0]?data[0].customer_name.split(' ')[0]:'';
+  if(name)document.getElementById('portal-welcome').textContent='Hey '+name+' your apps';
+  loadApps(user.email);
+}
+
+async function loadApps(email){
+  const grid=document.getElementById('apps-grid');
+  const{data,error}=await sb.from('projects').select('*').eq('customer_email',email).order('created_at',{ascending:false});
+  if(error||!data||!data.length){
+    grid.innerHTML='<div class="empty-state"><div class="icon">🚀</div><h3>No projects yet</h3><p>You do not have any Ainkle apps yet. Start a free consultation to get your first one built.</p><a href="https://ainkle.com" class="app-action-btn primary">Start a free consultation</a></div>';
+    return;
+  }
+  grid.innerHTML=data.map(p=>appCardHtml(p)).join('');
+}
+
+function appCardHtml(p){
+  const tier=getTier(p.monthly_fee||0);
+  const isLive=p.status==='live';
+  const isDemoSent=p.status==='demo_sent';
+  const isCancelled=p.status==='cancelled';
+  const statusClass='status-'+(p.status||'new');
+  return '<div class="app-card">'+
+    '<div class="app-card-top">'+
+      '<div class="app-card-info">'+
+        '<div class="app-tier-badge" style="background:'+tier.color+'18;color:'+tier.color+';border:1px solid '+tier.color+'30">'+tier.name+'</div>'+
+        '<div class="app-name">'+(p.project_name||'Untitled Project')+'</div>'+
+        '<div class="app-summary">'+(p.summary||'')+'</div>'+
+      '</div>'+
+      '<div class="app-status-area">'+
+        '<div class="status-badge '+statusClass+'">'+(p.status||'new').replace('_',' ')+'</div>'+
+        '<div class="app-ref">'+(p.ref_code||'')+'</div>'+
+        (!isCancelled?'<div class="app-pricing"><div class="monthly">'+fmt(p.monthly_fee)+'<span>/mo</span></div><div class="setup">'+(p.founding_member||p.setup_fee===0?'Setup fee waived':'Setup: '+fmt(p.setup_fee))+'</div></div>':'')+
+      '</div>'+
+    '</div>'+
+    (!isCancelled?'<div class="status-timeline">'+timelineHtml(p.status)+'</div>':'')+
+    '<div class="app-card-body">'+
+      (isLive&&p.live_url?'<a href="'+p.live_url+'" target="_blank" class="app-action-btn primary">🚀 Open your app</a>':'')+
+      (isDemoSent?'<a href="https://admin.ainkle.com/approval.html?ref='+p.ref_code+'" target="_blank" class="app-action-btn primary">👀 Review demo</a>':'')+
+      (!isCancelled&&(isLive||p.status==='approved')?'<button class="app-action-btn" onclick="openModal(\''+p.id+'\',\''+p.project_name+'\',\'revision\')">✏️ Request changes</button>':'')+
+      (!isCancelled?'<button class="app-action-btn" onclick="openModal(\''+p.id+'\',\''+p.project_name+'\',\'feature\')">➕ Add a feature</button>':'')+
+      (!isCancelled&&isLive?'<button class="app-action-btn danger" onclick="openModal(\''+p.id+'\',\''+p.project_name+'\',\'cancel\')">Cancel subscription</button>':'')+
+    '</div>'+
+  '</div>';
+}
+
+function openModal(id,name,action){
+  modalProjectId=id;modalAction=action;
+  const titles={revision:'Request changes',feature:'Add a feature',cancel:'Cancel subscription'};
+  const descs={revision:'Describe what you would like changed on '+name+'. Be as specific as possible.',feature:'Describe the feature you would like added to '+name+'.',cancel:'We are sorry to see you go. Please let us know why you are cancelling.'};
+  document.getElementById('modal-title').textContent=titles[action];
+  document.getElementById('modal-desc').textContent=descs[action];
+  document.getElementById('modal-text').value='';
+  document.getElementById('modal-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('modal-text').focus(),100);
+}
+
+function closeModal(){document.getElementById('modal-overlay').classList.remove('show');modalProjectId=null;modalAction=null}
+
+async function submitModal(){
+  const text=document.getElementById('modal-text').value.trim();
+  if(!text&&modalAction!=='cancel'){toast('Please describe your request','error');return}
+  const labels={revision:'REVISION REQUEST',feature:'FEATURE REQUEST',cancel:'CANCELLATION REQUEST'};
+  const content=labels[modalAction]+': '+(text||'Customer requested cancellation');
+  try{
+    await sb.from('messages').insert([{project_id:modalProjectId,sender:'customer',content:content}]);
+    if(modalAction==='cancel')await sb.from('projects').update({status:'cancelled'}).eq('id',modalProjectId);
+    const{data}=await sb.from('projects').select('project_name,ref_code,customer_name,customer_email').eq('id',modalProjectId).single();
+    await fetch(CLOUDFLARE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({_action:'send_email',to:'aiai.admin@gmail.com',subject:labels[modalAction]+' - '+(data&&data.project_name)+' ('+(data&&data.ref_code)+')',html:'<h2>'+labels[modalAction]+'</h2><p><strong>Customer:</strong> '+(data&&data.customer_name)+'</p><p><strong>Email:</strong> '+(data&&data.customer_email)+'</p><p><strong>Project:</strong> '+(data&&data.project_name)+'</p><hr/><p>'+content+'</p><p><a href="https://admin.ainkle.com/">View in dashboard</a></p>'})});
+    closeModal();
+    toast(modalAction==='cancel'?'Cancellation request sent. Our team will be in touch.':'Request sent! We will get back to you soon.',modalAction==='cancel'?'':'success');
+    if(currentUser)loadApps(currentUser.email);
+  }catch(e){console.error(e);toast('Error sending. Please email hello@ainkle.com','error')}
+}
+
+document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal()});
+checkAuth();
+</script>
+</body>
+</html>
