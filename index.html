@@ -321,6 +321,7 @@ function appCardHtml(p){
       (isDemoSent?'<a href="https://admin.ainkle.com/approval.html?ref='+p.ref_code+'" target="_blank" class="app-action-btn primary">👀 Review &amp; approve your app</a>':'')+
       (!isCancelled&&(isLive||p.status==='approved')?'<button class="app-action-btn" onclick="openModal(\''+p.id+'\',\''+p.project_name+'\',\'revision\')">✏️ Request changes</button>':'')+
       (!isCancelled?'<button class="app-action-btn" onclick="openModal(\''+p.id+'\',\''+p.project_name+'\',\'feature\')">➕ Add a feature</button>':'')+
+      (p.status==='approved'&&p.subscription_status!=='active'?'<button class="app-action-btn primary" id="pay-'+p.id+'" onclick="startPayment(\"'+p.id+'\",\"'+p.ref_code+'\",'+p.monthly_fee+')">💳 Complete payment</button>':'')+
       (!isCancelled&&isLive?'<button class="app-action-btn danger" onclick="openModal(\''+p.id+'\',\''+p.project_name+'\',\'cancel\')">Cancel subscription</button>':'')+
     '</div>'+
   '</div>';
