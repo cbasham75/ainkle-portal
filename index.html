@@ -226,7 +226,7 @@ function timelineHtml(status){
   return STATUS_ORDER.map((s,i)=>{
     const done=i<idx;
     const current=i===idx;
-    return '<div class="timeline-step"><div class="timeline-dot '+(done?'done':current?'current':'')+'">'+(done?'v':i+1)+'</div><div class="timeline-label '+(current?'active':'')+'">'+STATUS_LABELS[s]+'</div></div>';
+    return '<div class="timeline-step"><div class="timeline-dot '+(done?'done':current?'current':'')+'">'+(done?'✓':i+1)+'</div><div class="timeline-label '+(current?'active':'')+'">'+STATUS_LABELS[s]+'</div></div>';
   }).join('');
 }
 
@@ -238,16 +238,27 @@ async function sendMagicLink(){
   const btn=document.getElementById('magic-btn');
   err.style.display='none';
   if(!email||!email.includes('@')){err.textContent='Please enter a valid email';err.style.display='block';return}
-  btn.disabled=true;btn.textContent='Sending...';
+  btn.disabled=true;btn.textContent='Checking...';
+
+  // Only allow existing customers
+  const{data:existing}=await sb.from('projects').select('id').eq('customer_email',email).limit(1);
+  if(!existing||existing.length===0){
+    err.textContent='We do not have an account for that email. Did you use a different address? You can start a free consultation at ainkle.com.';
+    err.style.display='block';
+    btn.disabled=false;btn.textContent='Send login link';
+    return;
+  }
+
+  btn.textContent='Sending...';
   const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:'https://my.ainkle.com'}});
   if(error){err.textContent=error.message;err.style.display='block';btn.disabled=false;btn.textContent='Send login link';return}
   document.getElementById('login-form-body').style.display='none';
   document.getElementById('magic-sent').style.display='block';
-  // Mask email for privacy e.g. j***@yahoo.com
   const parts=email.split('@');
   const masked=parts[0][0]+'***@'+parts[1];
   document.getElementById('magic-email').textContent=masked;
 }
+
 
 async function doLogout(){
   await sb.auth.signOut();
@@ -270,7 +281,7 @@ async function showPortal(user){
   document.getElementById('nav-email').textContent=user.email;
   const{data}=await sb.from('projects').select('customer_name').eq('customer_email',user.email).limit(1);
   const name=data&&data[0]?data[0].customer_name.split(' ')[0]:'';
-  if(name)document.getElementById('portal-welcome').textContent='Hey '+name+' your apps';
+  if(name){document.getElementById('portal-welcome').textContent='Hey '+name+' 👋';document.querySelector('.portal-sub').textContent='Here are your Ainkle apps.';}
   loadApps(user.email);
 }
 
@@ -300,7 +311,7 @@ function appCardHtml(p){
       '<div class="app-status-area">'+
         '<div class="status-badge '+statusClass+'">'+(p.status||'new').replace('_',' ')+'</div>'+
         '<div class="app-ref">'+(p.ref_code||'')+'</div>'+
-        (!isCancelled?'<div class="app-pricing"><div class="monthly">'+fmt(p.monthly_fee)+'<span>/mo</span></div><div class="setup">'+(p.founding_member||p.setup_fee===0?'Setup fee waived':'Setup: '+fmt(p.setup_fee))+'</div></div>':'')+
+        (!isCancelled?'<div class="app-pricing"><div class="monthly">'+fmt(p.monthly_fee)+'<span>/mo</span></div><div class="setup">'+(p.founding_member||p.setup_fee===0?'Setup fee waived ★':'Setup: '+fmt(p.setup_fee))+'</div>'+(p.subscription_status==='active'?'<div style="font-size:10px;color:#16a34a;font-family:var(--mono);margin-top:2px">&#9679; Subscription active</div>':p.status==='live'?'<div style="font-size:10px;color:#d97706;font-family:var(--mono);margin-top:2px">&#9679; Pending payment</div>':'')+'</div>':'')+
       '</div>'+
     '</div>'+
     (!isCancelled?'<div class="status-timeline">'+timelineHtml(p.status)+'</div>':'')+
@@ -344,6 +355,14 @@ async function submitModal(){
 }
 
 document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal()});
+
+// Handle Stripe success return
+const _sp=new URLSearchParams(window.location.search);
+if(_sp.get('session_id')){
+  window.history.replaceState({},'',window.location.pathname);
+  setTimeout(()=>toast('Payment successful! Your subscription is now active.','success'),1500);
+}
+
 checkAuth();
 </script>
 </body>
