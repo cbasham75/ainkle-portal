@@ -317,7 +317,8 @@ function appCardHtml(p){
     (!isCancelled?'<div class="status-timeline">'+timelineHtml(p.status)+'</div>':'')+
     '<div class="app-card-body">'+
       (isLive&&p.live_url?'<a href="'+p.live_url+'" target="_blank" class="app-action-btn primary">🚀 Open your app</a>':'')+
-      (isDemoSent?'<a href="https://admin.ainkle.com/approval.html?ref='+p.ref_code+'" target="_blank" class="app-action-btn primary">👀 Review demo</a>':'')+
+      (p.status==='approved'&&p.subscription_status!=='active'?'<button class="app-action-btn primary" onclick="startPayment(\"'+p.id+'\",\"'+p.ref_code+'\",'+p.monthly_fee+')">💳 Complete payment</button>':'')+
+      (isDemoSent?'<a href="https://admin.ainkle.com/approval.html?ref='+p.ref_code+'" target="_blank" class="app-action-btn primary">👀 Review &amp; approve your app</a>':'')+
       (!isCancelled&&(isLive||p.status==='approved')?'<button class="app-action-btn" onclick="openModal(\''+p.id+'\',\''+p.project_name+'\',\'revision\')">✏️ Request changes</button>':'')+
       (!isCancelled?'<button class="app-action-btn" onclick="openModal(\''+p.id+'\',\''+p.project_name+'\',\'feature\')">➕ Add a feature</button>':'')+
       (!isCancelled&&isLive?'<button class="app-action-btn danger" onclick="openModal(\''+p.id+'\',\''+p.project_name+'\',\'cancel\')">Cancel subscription</button>':'')+
@@ -352,6 +353,36 @@ async function submitModal(){
     toast(modalAction==='cancel'?'Cancellation request sent. Our team will be in touch.':'Request sent! We will get back to you soon.',modalAction==='cancel'?'':'success');
     if(currentUser)loadApps(currentUser.email);
   }catch(e){console.error(e);toast('Error sending. Please email hello@ainkle.com','error')}
+}
+
+async function startPayment(projectId, refCode, monthlyFee){
+  const btn=event.target;
+  btn.disabled=true;btn.textContent='Loading...';
+  try{
+    const priceMap={9:'price_1Tbts6CGLQ2DVOdm5nbvzko4',29:'price_1TbtsSCGLQ2DVOdmjBhwv1aI',59:'price_1TbtsnCGLQ2DVOdmKp0JBepK',99:'price_1TbttHCGLQ2DVOdmGafRtEd0'};
+    let priceId=priceMap[monthlyFee];
+    if(!priceId){
+      // Find closest tier
+      if(monthlyFee<=9)priceId=priceMap[9];
+      else if(monthlyFee<=29)priceId=priceMap[29];
+      else if(monthlyFee<=59)priceId=priceMap[59];
+      else priceId=priceMap[99];
+    }
+    const res=await fetch('https://aiai-proxy.aiai-admin.workers.dev/',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        _action:'create_checkout',
+        customerEmail:currentUser.email,
+        priceId:priceId,
+        refCode:refCode,
+        projectId:projectId
+      })
+    });
+    const data=await res.json();
+    if(data.url){window.location.href=data.url}
+    else{toast('Error creating checkout. Please try again.','error');btn.disabled=false;btn.textContent='Complete payment';}
+  }catch(e){console.error(e);toast('Error. Please try again.','error');btn.disabled=false;btn.textContent='Complete payment';}
 }
 
 document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal()});
