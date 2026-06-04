@@ -300,32 +300,61 @@ function appCardHtml(p){
   const isLive=p.status==='live';
   const isDemoSent=p.status==='demo_sent';
   const isCancelled=p.status==='cancelled';
-  const statusClass='status-'+(p.status||'new');
+  const isApprovedUnpaid=p.status==='approved'&&p.subscription_status!=='active';
+  const ref=p.ref_code||'';
+  const name=p.project_name||'Untitled';
+  const id=p.id||'';
+  const fee=p.monthly_fee||0;
+  const liveUrl=p.live_url||'';
+
+  let buttons='';
+  if(isLive&&liveUrl)buttons+='<a href="'+liveUrl+'" target="_blank" class="app-action-btn primary">Open your app</a>';
+  if(isDemoSent)buttons+='<a href="https://admin.ainkle.com/approval.html?ref='+ref+'" target="_blank" class="app-action-btn primary">Review and approve</a>';
+  if(isApprovedUnpaid)buttons+='<button class="app-action-btn primary" data-id="'+id+'" data-ref="'+ref+'" data-fee="'+fee+'" onclick="hp(this)">Complete payment</button>';
+  if(!isCancelled&&(isLive||p.status==='approved'))buttons+='<button class="app-action-btn" data-id="'+id+'" data-name="'+name+'" data-type="revision" onclick="om(this)">Request changes</button>';
+  if(!isCancelled)buttons+='<button class="app-action-btn" data-id="'+id+'" data-name="'+name+'" data-type="feature" onclick="om(this)">Add a feature</button>';
+  if(!isCancelled&&isLive)buttons+='<button class="app-action-btn danger" data-id="'+id+'" data-name="'+name+'" data-type="cancel" onclick="om(this)">Cancel subscription</button>';
+
+  const setup=p.founding_member||p.setup_fee===0?'Setup fee waived':'Setup: '+fmt(p.setup_fee);
+  const subStatus=p.subscription_status==='active'?'<div style="font-size:10px;color:#16a34a;font-family:var(--mono);margin-top:2px">Active</div>':'';
+  const pricing=isCancelled?'':'<div class="app-pricing"><div class="monthly">'+fmt(fee)+'<span>/mo</span></div><div class="setup">'+setup+'</div>'+subStatus+'</div>';
+  const timeline=isCancelled?'':'<div class="status-timeline">'+timelineHtml(p.status)+'</div>';
+
   return '<div class="app-card">'+
     '<div class="app-card-top">'+
       '<div class="app-card-info">'+
         '<div class="app-tier-badge" style="background:'+tier.color+'18;color:'+tier.color+';border:1px solid '+tier.color+'30">'+tier.name+'</div>'+
-        '<div class="app-name">'+(p.project_name||'Untitled Project')+'</div>'+
+        '<div class="app-name">'+name+'</div>'+
         '<div class="app-summary">'+(p.summary||'')+'</div>'+
       '</div>'+
       '<div class="app-status-area">'+
-        '<div class="status-badge '+statusClass+'">'+(p.status||'new').replace('_',' ')+'</div>'+
-        '<div class="app-ref">'+(p.ref_code||'')+'</div>'+
-        (!isCancelled?'<div class="app-pricing"><div class="monthly">'+fmt(p.monthly_fee)+'<span>/mo</span></div><div class="setup">'+(p.founding_member||p.setup_fee===0?'Setup fee waived ★':'Setup: '+fmt(p.setup_fee))+'</div>'+(p.subscription_status==='active'?'<div style="font-size:10px;color:#16a34a;font-family:var(--mono);margin-top:2px">&#9679; Subscription active</div>':p.status==='live'?'<div style="font-size:10px;color:#d97706;font-family:var(--mono);margin-top:2px">&#9679; Pending payment</div>':'')+'</div>':'')+
+        '<div class="status-badge status-'+(p.status||'new')+'">'+(p.status||'new').replace('_',' ')+'</div>'+
+        '<div class="app-ref">'+ref+'</div>'+
+        pricing+
       '</div>'+
     '</div>'+
-    (!isCancelled?'<div class="status-timeline">'+timelineHtml(p.status)+'</div>':'')+
-    '<div class="app-card-body">'+
-      (isLive&&p.live_url?'<a href="'+p.live_url+'" target="_blank" class="app-action-btn primary">🚀 Open your app</a>':'')+
-      (p.status==='approved'&&p.subscription_status!=='active'?'<button class="app-action-btn primary" onclick="startPayment(\"'+p.id+'\",\"'+p.ref_code+'\",'+p.monthly_fee+')">💳 Complete payment</button>':'')+
-      (isDemoSent?'<a href="https://admin.ainkle.com/approval.html?ref='+p.ref_code+'" target="_blank" class="app-action-btn primary">👀 Review &amp; approve your app</a>':'')+
-      (!isCancelled&&(isLive||p.status==='approved')?'<button class="app-action-btn" onclick="openModal(\''+p.id+'\',\''+p.project_name+'\',\'revision\')">✏️ Request changes</button>':'')+
-      (!isCancelled?'<button class="app-action-btn" onclick="openModal(\''+p.id+'\',\''+p.project_name+'\',\'feature\')">➕ Add a feature</button>':'')+
-      (p.status==='approved'&&p.subscription_status!=='active'?'<button class="app-action-btn primary" id="pay-'+p.id+'" onclick="startPayment(\"'+p.id+'\",\"'+p.ref_code+'\",'+p.monthly_fee+')">💳 Complete payment</button>':'')+
-      (!isCancelled&&isLive?'<button class="app-action-btn danger" onclick="openModal(\''+p.id+'\',\''+p.project_name+'\',\'cancel\')">Cancel subscription</button>':'')+
-    '</div>'+
+    timeline+
+    '<div class="app-card-body">'+buttons+'</div>'+
   '</div>';
 }
+
+function om(el){openModal(el.dataset.id,el.dataset.name,el.dataset.type);}
+
+async function hp(el){
+  el.disabled=true;el.textContent='Loading...';
+  const pm={'9':'price_1Tbts6CGLQ2DVOdm5nbvzko4','29':'price_1TbtsSCGLQ2DVOdmjBhwv1aI','59':'price_1TbtsnCGLQ2DVOdmKp0JBepK','99':'price_1TbttHCGLQ2DVOdmGafRtEd0'};
+  const fee=parseFloat(el.dataset.fee);
+  let pid=pm[String(fee)];
+  if(!pid){if(fee<=9)pid=pm['9'];else if(fee<=29)pid=pm['29'];else if(fee<=59)pid=pm['59'];else pid=pm['99'];}
+  try{
+    const res=await fetch('https://aiai-proxy.aiai-admin.workers.dev/',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({_action:'create_checkout',customerEmail:currentUser.email,priceId:pid,refCode:el.dataset.ref,projectId:el.dataset.id})});
+    const data=await res.json();
+    if(data.url){window.location.href=data.url;}
+    else{toast('Error creating checkout. Please try again.','error');el.disabled=false;el.textContent='Complete payment';}
+  }catch(e){console.error(e);toast('Error. Please try again.','error');el.disabled=false;el.textContent='Complete payment';}
+}
+
 
 function openModal(id,name,action){
   modalProjectId=id;modalAction=action;
