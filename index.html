@@ -347,7 +347,7 @@ async function hp(el){
   let pid=pm[String(fee)];
   if(!pid){if(fee<=9)pid=pm['9'];else if(fee<=29)pid=pm['29'];else if(fee<=59)pid=pm['59'];else pid=pm['99'];}
   try{
-    const res=await fetch('https://aiai-proxy.aiai-admin.workers.dev/',{method:'POST',headers:{'Content-Type':'application/json'},
+    const res=await fetch('https://aiai-proxy.aiai-admin.workers.dev/',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1bmNobnV0eGpiYXhlc2Fqc3ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NjQ5MTYsImV4cCI6MjA5MjA0MDkxNn0.GgZQ9qFTeOLjSRs8KxSt_MW4Q4FO3DJEyHUpDnl32lM'},
       body:JSON.stringify({_action:'create_checkout',customerEmail:currentUser.email,priceId:pid,refCode:el.dataset.ref,projectId:el.dataset.id})});
     const data=await res.json();
     if(data.url){window.location.href=data.url;}
